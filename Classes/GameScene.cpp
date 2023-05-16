@@ -23,6 +23,7 @@
  ****************************************************************************/
 
 #include "GameScene.h"
+#include <exception>
 
 USING_NS_CC;
 
@@ -65,24 +66,29 @@ bool GameScene::onTouchBegan(Touch* touch, Event* unused_event) {
 			Vec2 touchLocation = touch->getLocation();
 			bool is_choise = false;
 			int index = 0;
-
-			const Cell& hit_cell = board->GetCellByTouch(touchLocation);
-			const Vec2& cell_pos = hit_cell.position_on_map;
-			//std::cerr << "hit_cell_pos.x = " << cell_pos.x << "\nhit_cell_pos.y = " << cell_pos.y << '\n';
-			// проверка, попали ли пальцем в свою шашку
-			if (hit_cell.status == CellStatus::WHITE) { // || hit_cell.status == CellStatus::BLACK) {
-				if (board->IsChoised()) {
-					board->CancelChoise(cell_pos);
+			try {
+				const Cell& hit_cell = board->GetCellByTouch(touchLocation);
+				const Vec2& cell_pos = hit_cell.position_on_map;
+				//std::cerr << "hit_cell_pos.x = " << cell_pos.x << "\nhit_cell_pos.y = " << cell_pos.y << '\n';
+				// проверка, попали ли пальцем в свою шашку
+				if (hit_cell.status == CellStatus::WHITE) { // || hit_cell.status == CellStatus::BLACK) {
+					if (board->IsChoised()) {
+						board->CancelChoise(cell_pos);
+					}
+					board->SetChoised(cell_pos);
 				}
-				board->SetChoised(cell_pos);
+				else if (hit_cell.status == CellStatus::FREE && board->IsChoised()) {
+					board->MoveIsPosibleTo(cell_pos);
+				}
+				return true;
 			}
-			else if (hit_cell.status == CellStatus::FREE && board->IsChoised()) {
-				board->MoveIsPosibleTo(cell_pos);
+			catch (std::exception& ex) {
+				std::cerr << ex.what() << std::endl;
+
 			}
 		}
 	}
-
-	return true;
+	return false;
 }
 
 void GameScene::update(float delta) {
@@ -91,13 +97,16 @@ void GameScene::update(float delta) {
 			board->AiMove();
 			if (board->IsWinner()) {
 				auto director = Director::getInstance();
-				auto label = Label::create();
-				label->setString(board->GetWinner());
-				label->setColor(Color3B::BLACK);
-				label->setScale(2, 2);
-				auto window_size = director->getWinSize();
-				label->setPosition(Vec2(window_size.height / 2, window_size.width / 2));
-				this->addChild(label, SLayer::LABEL);
+				auto label = Label::createWithTTF(board->GetWinner(), "fonts/arial.ttf", 32);
+				if (label == nullptr) {
+					std::cerr << "'./fonts/arial.ttf' not found" << std::endl;
+				}
+				else {
+					label->setColor(Color3B::BLACK);
+					auto window_size = director->getWinSize();
+					label->setPosition(Vec2(window_size.height / 2, window_size.width / 2));
+					this->addChild(label, SLayer::LABEL);
+				}
 			}
 		}
 	}

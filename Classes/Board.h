@@ -9,13 +9,14 @@
 #include <ctime>
 #include <exception>
 
-enum CellStatus { BLACK = -1, FREE = 0, WHITE, DEAD_HEAT };
+enum class CellStatus { BLACK = -1, FREE = 0, WHITE };
+enum class Winner { BLACK, WHITE, DEAD_HEAT, UNDEFINED };
 
 struct Cell {
 	cocos2d::Sprite* cell_sprite = nullptr; // спрайт клетки
 	cocos2d::Sprite* pawn_sprite = nullptr; // спрайт пешки
 	cocos2d::Label* label = nullptr;        // подпись клетки (для удобства, потом УДАЛИТЬ)
-	CellStatus status = FREE;
+	CellStatus status = CellStatus::FREE;
 	cocos2d::Vec2 position_on_map;  // хранит свои координаты на игровом поле (x, y)
 	bool choised = false;
 
@@ -39,16 +40,13 @@ public:
 
 	BoardMap BuildBoard();
 
-	//const Cell& GetCell(const int x, const int y) const { return board[x][y]; }
-	//const Cell* GetChoised() const { return choised_pawn; }
-
 	const Cell& GetCellByTouch(const cocos2d::Vec2& touchLocation) const;
 
 	bool IsInGame() { return !is_game_over; }
 	std::string GetWinner() const;
 	bool IsWinner();
 
-	bool IsChoised() const { return choised_pawn; }
+	bool IsChoised() const { return static_cast<bool>(choised_pawn); }
 	void SetChoised(const cocos2d::Vec2& coordinates);
 	void CancelChoise(const cocos2d::Vec2& coordinates);
 
@@ -83,7 +81,7 @@ private:
 	std::vector<Pawn> white_pawns;
 	Cell* choised_pawn = nullptr;
 	bool is_game_over = false;
-	CellStatus winner = CellStatus::FREE;
+	Winner winner = Winner::DEAD_HEAT;
 	bool ai_move = false; // хранит чей сейчас ход
 	size_t bypassed_index = 0;
 
@@ -91,9 +89,9 @@ private:
 		return {board[0][0].cell_sprite->getContentSize().width, board[0][0].cell_sprite->getContentSize().height};
 	}
 	void ChangePlayer() { ai_move = !ai_move; }
-	std::vector<Pawn> ArrangeCheckers(const CellStatus color = WHITE);
+	std::vector<Pawn> ArrangeCheckers(const CellStatus color = CellStatus::WHITE);
 
-	enum Move {RIGHT, DOWN, BLOCKED, LEFT = 3, UP = 4};
+	enum class Move {RIGHT, DOWN, BLOCKED, LEFT = 3, UP = 4};
 
 	int GetRandomNumber(const int min, const int max) const;
 	std::vector<size_t> GetNonBlockedPawnsForAdvance(const std::vector<Pawn>& pawns) const;

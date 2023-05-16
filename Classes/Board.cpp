@@ -97,7 +97,7 @@ const Cell& Board::GetCellByTouch(const Vec2& touchLocation) const {
 		}
 	}
 	// если кликнули мимо игральной доски бросаем исключение (чтобы warning'а не было)
-	throw std::out_of_range("Touch is not possible\n");
+	throw std::runtime_error("Touch is not possible\n");
 }
 
 void Board::MoveIsPosibleTo(const Vec2& move_to) {
@@ -132,8 +132,12 @@ void Board::MoveIsPosibleTo(const Vec2& move_to) {
 }
 
 int Board::GetRandomNumber(const int min, const int max) const {
-	// Установим начальную точку генерирования последовательности относительно time(NULL)
-	srand(time(NULL));
+	static bool doOnce = true;
+	if (doOnce) {
+		doOnce = false;
+		// Установим начальную точку генерирования последовательности относительно time(NULL)
+		srand(time(NULL));
+	}
 	return min + rand() % (max - min + 1);
 }
 
@@ -435,7 +439,6 @@ std::vector<size_t> Board::GetNonBlockedPawnsForBypass(const std::vector<Board::
 			}
 		}
 	}
-
 	return std::move(result);
 }
 
@@ -459,31 +462,27 @@ bool Board::IsWinner() {
 			}
 		}
 	}
-	if (black_counter == 9 && white_counter == 9) winner = CellStatus::DEAD_HEAT;
-	else if (black_counter == 9 && white_counter < 9) winner = CellStatus::BLACK;
-	else if (black_counter < 9 && white_counter == 9) winner = CellStatus::WHITE;
-	else winner = CellStatus::FREE;
+	if (black_counter == 9 && white_counter == 9) winner = Winner::DEAD_HEAT;
+	else if (black_counter == 9 && white_counter < 9) winner = Winner::BLACK;
+	else if (black_counter < 9 && white_counter == 9) winner = Winner::WHITE;
+	else winner = Winner::UNDEFINED;
 
-	if (!is_game_over) is_game_over = static_cast<bool>(winner);
-	else {
-		if (black_counter == white_counter) winner = CellStatus::DEAD_HEAT;
-		else if (black_counter > white_counter) winner = CellStatus::BLACK;
-		else if (black_counter < white_counter) winner = CellStatus::WHITE;
-	}
+	is_game_over = static_cast<bool>(winner != Winner::UNDEFINED);
 
 	return is_game_over;
 }
 
 std::string Board::GetWinner() const {
-	std::string result;
-	if (winner == CellStatus::DEAD_HEAT) result = "Dead Heat!";
-	else if (winner == CellStatus::BLACK) result = "Black winner!";
-	else if (winner == CellStatus::WHITE) result = "White winner!";
-	return result;
+	switch (winner) {
+		case Winner::DEAD_HEAT: return "Dead Heat!";
+		case Winner::BLACK: return "Black winner!";
+		case Winner::WHITE: return "White winner!";
+		default: return "Board::GetWinner(): Something wrong :(";
+	}
 }
 
 Board::Move Board::GetMoveDirection(const Pawn& pawn, const bool is_advance) const {
-	Move move = BLOCKED;
+	Move move = Move::BLOCKED;
 	if (is_advance) {
 		// если можно ходить и вправо и вниз, тогда возвращаем рандомный Move
 		if (pawn.is_move_right && pawn.is_move_down) {
@@ -505,7 +504,7 @@ Board::Move Board::GetMoveForBypass(const Vec2& pos) const {
 	const int left_x = pos.x - 1;
 	const int down_y = pos.y - 1;
 	bool both_move = false;
-	Move result = BLOCKED;
+	Move result = Move::BLOCKED;
 	// проверяем диагональную клетку (вверх+вправо) на выход за границы доски
 	if (right_x < BOARD_SIZE && up_y < BOARD_SIZE) {
 		// свободна ли она
